@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Запись данных</title>
+    <script src="https://st.max.ru/js/max-web-app.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; }
+        body { background: #f5f5f5; min-height: 100vh; display: flex; flex-direction: column; }
+        .screen { display: none; padding: 20px; flex-direction: column; gap: 16px; flex: 1; }
+        .screen.active { display: flex; }
+        .title { font-size: 20px; font-weight: 600; color: #333; text-align: center; margin-bottom: 8px; }
+        .btn { background: #007AFF; color: white; border: none; border-radius: 12px; padding: 16px; font-size: 16px; font-weight: 500; cursor: pointer; }
+        .btn:active { opacity: 0.7; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        .btn-secondary { background: #E5E5EA; color: #333; }
+        .btn-container { display: flex; gap: 12px; margin-top: auto; padding-top: 20px; }
+        .btn-container .btn { flex: 1; }
+        .form-group { display: flex; flex-direction: column; gap: 8px; }
+        .form-group label { font-size: 14px; color: #666; font-weight: 500; }
+        .form-group input { border: 1px solid #ddd; border-radius: 8px; padding: 12px; font-size: 16px; background: white; }
+        .date-display { background: #f0f0f0; border-radius: 8px; padding: 12px; font-size: 16px; color: #666; }
+        .dropdown { position: relative; }
+        .dropdown-btn { width: 100%; border: 1px solid #ddd; border-radius: 8px; padding: 12px; font-size: 16px; background: white; text-align: left; cursor: pointer; display: flex; justify-content: space-between; align-items: center; }
+        .dropdown-btn::after { content: '▼'; font-size: 12px; color: #999; }
+        .dropdown-menu { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid #ddd; border-radius: 8px; margin-top: 4px; max-height: 200px; overflow-y: auto; z-index: 100; display: none; }
+        .dropdown-menu.show { display: block; }
+        .dropdown-item { padding: 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; }
+        .dropdown-item:hover { background: #f5f5f5; }
+        .dropdown-item.selected { background: #007AFF; color: white; }
+    </style>
+</head>
+<body>
+    <div id="mainScreen" class="screen active">
+        <h1 class="title">Главное меню</h1>
+        <button class="btn" onclick="showEntryScreen()">Добавить запись</button>
+    </div>
+
+    <div id="regScreen" class="screen">
+        <h1 class="title">Регистрация</h1>
+        <div class="form-group">
+            <label>Имя</label>
+            <input type="text" id="firstName" placeholder="Введите имя">
+        </div>
+        <div class="form-group">
+            <label>Фамилия</label>
+            <input type="text" id="lastName" placeholder="Введите фамилию">
+        </div>
+        <button class="btn" onclick="saveRegistration()">Сохранить</button>
+    </div>
+
+    <div id="entryScreen" class="screen">
+        <h1 class="title">Новая запись</h1>
+        <div class="form-group">
+            <label>Текущая дата</label>
+            <div id="dateDisplay" class="date-display"></div>
+        </div>
+        <div class="form-group">
+            <label>Объект</label>
+            <div class="dropdown">
+                <div class="dropdown-btn" id="dropdownBtn" onclick="toggleDropdown()">Выберите объект</div>
+                <div class="dropdown-menu" id="dropdownMenu"></div>
+            </div>
+        </div>
+        <div class="btn-container">
+            <button class="btn btn-secondary" onclick="cancel()">Отмена</button>
+            <button class="btn" id="saveBtn" onclick="saveEntry()" disabled>Сохранить</button>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+        let userData = null;
+        const objects = ['Объект А', 'Объект Б', 'Объект В', 'Объект Г', 'Объект Д'];
+        let selectedObject = '';
+
+        function initDropdown() {
+            const menu = document.getElementById('dropdownMenu');
+            objects.forEach(obj => {
+                const item = document.createElement('div');
+                item.className = 'dropdown-item';
+                item.textContent = obj;
+                item.onclick = () => selectObject(obj);
+                menu.appendChild(item);
+            });
+        }
+
+        function toggleDropdown() {
+            document.getElementById('dropdownMenu').classList.toggle('show');
+        }
+
+        function selectObject(value) {
+            selectedObject = value;
+            document.getElementById('dropdownBtn').textContent = value;
+            document.getElementById('dropdownMenu').classList.remove('show');
+            document.getElementById('saveBtn').disabled = !value;
+        }
+
+        async function init() {
+            initDropdown();
+            try {
+                const firstName = localStorage.getItem('firstName');
+                const lastName = localStorage.getItem('lastName');
+                if (firstName && lastName) {
+                    userData = { firstName, lastName };
+                    showMainScreen();
+                } else {
+                    showRegScreen();
+                }
+            } catch (e) {
+                showRegScreen();
+            }
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.dropdown')) {
+                    document.getElementById('dropdownMenu').classList.remove('show');
+                }
+            });
+        }
+
+        function showMainScreen() {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('mainScreen').classList.add('active');
+        }
+
+        function showRegScreen() {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('regScreen').classList.add('active');
+        }
+
+        async function showEntryScreen() {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const screen = document.getElementById('entryScreen');
+            screen.classList.add('active');
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            document.getElementById('dateDisplay').textContent = day + '.' + month + '.' + year;
+            selectedObject = '';
+            document.getElementById('dropdownBtn').textContent = 'Выберите объект';
+            document.getElementById('saveBtn').disabled = true;
+        }
+
+        function saveRegistration() {
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            if (!firstName || !lastName) {
+                alert('Пожалуйста, заполните все поля');
+                return;
+            }
+            localStorage.setItem('firstName', firstName);
+            localStorage.setItem('lastName', lastName);
+            userData = { firstName, lastName };
+            showMainScreen();
+        }
+
+        async function saveEntry() {
+            if (!selectedObject) {
+                alert('Пожалуйста, выберите объект');
+                return;
+            }
+            const date = document.getElementById('dateDisplay').textContent;
+            const record = date + '#' + userData.firstName + ' ' + userData.lastName + '#' + selectedObject;
+            const chat = window.WebApp?.initDataUnsafe?.chat;
+            try {
+                const response = await fetch(API_URL + '/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ record: record, chatId: chat?.id })
+                });
+                if (response.ok) {
+                    window.WebApp.close();
+                } else {
+                    alert('Ошибка сохранения');
+                }
+            } catch (e) {
+                console.error('Save error:', e);
+                alert('Ошибка соединения с сервером');
+            }
+        }
+
+        function cancel() {
+            showMainScreen();
+        }
+
+        try { window.WebApp.init(); } catch (e) {}
+        init();
+    </script>
+</body>
+</html>
