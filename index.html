@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Запись данных</title>
+    <script src="https://st.max.ru/js/max-web-app.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        body {
+            background: #f5f5f5;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .screen {
+            display: none;
+            padding: 20px;
+            flex-direction: column;
+            gap: 16px;
+            flex: 1;
+        }
+        .screen.active {
+            display: flex;
+        }
+        .title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .btn {
+            background: #007AFF;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 16px;
+            font-size: 16px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn:active {
+            opacity: 0.7;
+        }
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: #E5E5EA;
+            color: #333;
+        }
+        .btn-container {
+            display: flex;
+            gap: 12px;
+            margin-top: auto;
+            padding-top: 20px;
+        }
+        .btn-container .btn {
+            flex: 1;
+        }
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .form-group label {
+            font-size: 14px;
+            color: #666;
+            font-weight: 500;
+        }
+        .form-group input,
+        .form-group select {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 16px;
+            background: white;
+        }
+        .form-group input:disabled {
+            background: #f0f0f0;
+            color: #666;
+        }
+        .date-display {
+            background: #f0f0f0;
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 16px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div id="mainScreen" class="screen active">
+        <h1 class="title">Главное меню</h1>
+        <button class="btn" onclick="showEntryScreen()">Добавить запись</button>
+    </div>
+
+    <div id="regScreen" class="screen">
+        <h1 class="title">Регистрация</h1>
+        <div class="form-group">
+            <label>Имя</label>
+            <input type="text" id="firstName" placeholder="Введите имя">
+        </div>
+        <div class="form-group">
+            <label>Фамилия</label>
+            <input type="text" id="lastName" placeholder="Введите фамилию">
+        </div>
+        <button class="btn" onclick="saveRegistration()">Сохранить</button>
+    </div>
+
+    <div id="entryScreen" class="screen">
+        <h1 class="title">Новая запись</h1>
+        <div class="form-group">
+            <label>Текущая дата</label>
+            <div id="dateDisplay" class="date-display"></div>
+        </div>
+        <div class="form-group">
+            <label>Объект</label>
+            <select id="objectSelect">
+                <option value="">Выберите объект</option>
+            </select>
+        </div>
+        <div class="btn-container">
+            <button class="btn btn-secondary" onclick="cancel()">Отмена</button>
+            <button class="btn" id="saveBtn" onclick="saveEntry()" disabled>Сохранить</button>
+        </div>
+    </div>
+
+    <script>
+        let userData = null;
+        let objects = [];
+
+        async function loadObjects() {
+            try {
+                const response = await fetch('objects.txt');
+                const text = await response.text();
+                objects = text.split('\n').filter(line => line.trim());
+                const select = document.getElementById('objectSelect');
+                objects.forEach(obj => {
+                    const option = document.createElement('option');
+                    option.value = obj.trim();
+                    option.textContent = obj.trim();
+                    select.appendChild(option);
+                });
+            } catch (e) {
+                console.error('Failed to load objects:', e);
+            }
+        }
+
+        async function init() {
+            loadObjects();
+            
+            const firstName = await window.WebApp.SecureStorage.getItem('firstName');
+            const lastName = await window.WebApp.SecureStorage.getItem('lastName');
+            
+            if (firstName?.value && lastName?.value) {
+                userData = {
+                    firstName: firstName.value,
+                    lastName: lastName.value
+                };
+                showMainScreen();
+            } else {
+                showRegScreen();
+            }
+
+            document.getElementById('objectSelect').addEventListener('change', validateForm);
+        }
+
+        function validateForm() {
+            const select = document.getElementById('objectSelect');
+            const saveBtn = document.getElementById('saveBtn');
+            saveBtn.disabled = !select.value;
+        }
+
+        function showMainScreen() {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('mainScreen').classList.add('active');
+        }
+
+        function showRegScreen() {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById('regScreen').classList.add('active');
+        }
+
+        async function showEntryScreen() {
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            const screen = document.getElementById('entryScreen');
+            screen.classList.add('active');
+            
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            document.getElementById('dateDisplay').textContent = `${day}.${month}.${year}`;
+            
+            const select = document.getElementById('objectSelect');
+            select.selectedIndex = 0;
+            document.getElementById('saveBtn').disabled = true;
+        }
+
+        async function saveRegistration() {
+            const firstName = document.getElementById('firstName').value.trim();
+            const lastName = document.getElementById('lastName').value.trim();
+            
+            if (!firstName || !lastName) {
+                alert('Пожалуйста, заполните все поля');
+                return;
+            }
+
+            await window.WebApp.SecureStorage.setItem('firstName', firstName);
+            await window.WebApp.SecureStorage.setItem('lastName', lastName);
+            
+            userData = { firstName, lastName };
+            showMainScreen();
+        }
+
+        async function saveEntry() {
+            const date = document.getElementById('dateDisplay').textContent;
+            const object = document.getElementById('objectSelect').value;
+            
+            if (!object) {
+                alert('Пожалуйста, выберите объект');
+                return;
+            }
+
+            const record = `${date}#${userData.firstName} ${userData.lastName}#${object}\n`;
+
+            try {
+                const response = await fetch('/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ record })
+                });
+
+                if (response.ok) {
+                    window.WebApp.close();
+                } else {
+                    alert('Ошибка сохранения');
+                }
+            } catch (e) {
+                console.error('Save error:', e);
+                alert('Ошибка сохранения');
+            }
+        }
+
+        function cancel() {
+            showMainScreen();
+        }
+
+        window.WebApp.init();
+        init();
+    </script>
+</body>
+</html>
