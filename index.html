@@ -280,6 +280,100 @@
             font-size: 14px;
             padding: 14px;
         }
+
+        /* Today marks */
+        .today-marks {
+            margin-bottom: 16px;
+        }
+        .today-marks-title {
+            font-size: 13px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .today-mark-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg);
+            border-radius: 8px;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+        .today-mark-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            flex-shrink: 0;
+        }
+        .today-mark-time {
+            color: var(--text-tertiary);
+            font-size: 12px;
+            margin-left: auto;
+        }
+        .no-marks {
+            text-align: center;
+            color: var(--text-tertiary);
+            font-size: 14px;
+            padding: 8px;
+        }
+
+        /* Admin panel */
+        .pin-input {
+            text-align: center;
+            font-size: 24px;
+            letter-spacing: 12px;
+            padding: 14px 16px;
+            font-family: monospace;
+        }
+        .pin-hint {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-tertiary);
+            margin-bottom: 12px;
+        }
+        .stat-block {
+            margin-bottom: 16px;
+        }
+        .stat-block h3 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-person {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        .stat-person:last-child {
+            border-bottom: none;
+        }
+        .stat-person-objects {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 2px;
+        }
+        .stat-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: #fff;
+            border-radius: 10px;
+            padding: 1px 8px;
+            font-size: 12px;
+            margin-left: 6px;
+        }
+        .admin-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .admin-actions button {
+            flex: 1;
+        }
     </style>
 </head>
 <body>
@@ -312,11 +406,12 @@
 
         <!-- Main menu screen -->
         <div id="mainMenuScreen" class="screen">
-            <h1>Контроль сотрудников</h1>
+            <h1 id="mainTitle">Контроль сотрудников</h1>
             <div class="user-info">
                 <div class="user-name" id="userNameDisplay"></div>
                 <div class="user-phone" id="userPhoneDisplay"></div>
             </div>
+            <div class="today-marks" id="todayMarks"></div>
             <button class="btn-primary" id="btnAddRecord">Добавить запись</button>
         </div>
 
@@ -340,11 +435,37 @@
             </div>
         </div>
 
+        <!-- Admin panel screen -->
+        <div id="adminScreen" class="screen">
+            <h1>Админ-панель</h1>
+            <div class="card" id="adminLogin">
+                <div class="pin-hint">Введите PIN-код</div>
+                <input type="password" id="pinInput" class="pin-input" placeholder="****" maxlength="4" autocomplete="off" inputmode="numeric" pattern="[0-9]*">
+                <button class="btn-primary" id="btnPinSubmit">Войти</button>
+                <button class="btn-secondary" id="btnPinBack">Назад</button>
+                <div class="error" id="pinError"></div>
+            </div>
+            <div class="card" id="adminDashboard" style="display:none">
+                <div class="stat-block">
+                    <h3 id="statsDate"></h3>
+                    <div id="statsPeople"></div>
+                </div>
+                <div class="stat-block">
+                    <h3>По объектам</h3>
+                    <div id="statsObjects"></div>
+                </div>
+                <div class="admin-actions">
+                    <button class="btn-primary" id="btnRefreshStats">Обновить</button>
+                    <button class="btn-secondary" id="btnAdminBack">Назад</button>
+                </div>
+            </div>
+        </div>
+
     </div>
 
     <script>
     (function () {
-        var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzl1oq0NxJPiY1B7l0dGDyPtbwHoMXk9jbWF3GX-7Q066kfBhJUZ4MNVJrzvmQSupl7ew/exec';
+        var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwa0ntvtqSZN-7VI9HSLla7hBej8nU-xhz4gXd6DcQt6TcnMr6v5RmesS4gkxQfAp-55Q/exec';
 
         var userData = { firstName: '', lastName: '', phone: '' };
         var objects = [];
@@ -455,6 +576,40 @@
             $('userNameDisplay').textContent = userData.firstName + ' ' + userData.lastName;
             $('userPhoneDisplay').textContent = formatPhone(userData.phone);
             showScreen('mainMenuScreen');
+            loadTodayMarks();
+        }
+
+        function loadTodayMarks() {
+            var container = $('todayMarks');
+            container.innerHTML = '<div class="loading-text">Загрузка...</div>';
+
+            if (!APPS_SCRIPT_URL || !maxUser.userId) {
+                container.innerHTML = '';
+                return;
+            }
+
+            fetch(APPS_SCRIPT_URL + '?action=today&userId=' + maxUser.userId)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    var marks = data.marks || [];
+                    if (marks.length === 0) {
+                        container.innerHTML = '<div class="no-marks">Сегодня ещё нет отметок</div>';
+                        return;
+                    }
+                    var h = '<div class="today-marks-title">Сегодня отмечено</div>';
+                    for (var i = 0; i < marks.length; i++) {
+                        var time = '';
+                        try {
+                            var d = new Date(marks[i].timestamp);
+                            time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+                        } catch (e) {}
+                        h += '<div class="today-mark-item"><div class="today-mark-dot"></div>' + marks[i].object + '<div class="today-mark-time">' + time + '</div></div>';
+                    }
+                    container.innerHTML = h;
+                })
+                .catch(function () {
+                    container.innerHTML = '';
+                });
         }
 
         function formatPhone(p) {
@@ -472,6 +627,103 @@
         $('btnAddRecord').addEventListener('click', function () {
             showAddRecord();
         });
+
+        /* ---- admin panel (long press on title) ---- */
+        var pressTimer;
+        $('mainTitle').addEventListener('pointerdown', function (e) {
+            pressTimer = setTimeout(function () {
+                showAdminLogin();
+            }, 1200);
+        });
+        $('mainTitle').addEventListener('pointerup', function () {
+            clearTimeout(pressTimer);
+        });
+        $('mainTitle').addEventListener('pointermove', function () {
+            clearTimeout(pressTimer);
+        });
+
+        function showAdminLogin() {
+            $('pinInput').value = '';
+            $('pinError').textContent = '';
+            $('adminLogin').style.display = '';
+            $('adminDashboard').style.display = 'none';
+            showScreen('adminScreen');
+        }
+
+        $('btnPinSubmit').addEventListener('click', function () {
+            var pin = $('pinInput').value.trim();
+            if (!pin) {
+                $('pinError').textContent = 'Введите PIN';
+                return;
+            }
+            loadAdminStats(pin);
+        });
+
+        $('pinInput').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                $('btnPinSubmit').click();
+            }
+        });
+
+        $('btnPinBack').addEventListener('click', function () {
+            showMainMenu();
+        });
+
+        $('btnAdminBack').addEventListener('click', function () {
+            showMainMenu();
+        });
+
+        $('btnRefreshStats').addEventListener('click', function () {
+            var pin = $('pinInput').value.trim();
+            loadAdminStats(pin);
+        });
+
+        function loadAdminStats(pin) {
+            $('pinError').textContent = '';
+            $('adminDashboard').style.display = 'none';
+
+            if (!APPS_SCRIPT_URL) {
+                $('pinError').textContent = 'API не настроен';
+                return;
+            }
+
+            fetch(APPS_SCRIPT_URL + '?action=stats&pin=' + encodeURIComponent(pin))
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.error) {
+                        $('pinError').textContent = data.error;
+                        return;
+                    }
+
+                    $('adminLogin').style.display = 'none';
+                    $('adminDashboard').style.display = '';
+
+                    $('statsDate').textContent = 'Отчёт за ' + (data.today || 'сегодня');
+
+                    var ph = '';
+                    if (data.totalToday === 0) {
+                        ph = '<div class="no-marks">Нет отметок</div>';
+                    } else {
+                        for (var i = 0; i < data.people.length; i++) {
+                            var p = data.people[i];
+                            ph += '<div class="stat-person"><strong>' + p.name + '</strong>';
+                            if (p.phone) { ph += ' &middot; ' + p.phone; }
+                            ph += '<div class="stat-person-objects">' + p.objects.join(', ') + '</div></div>';
+                        }
+                    }
+                    $('statsPeople').innerHTML = ph;
+
+                    var oh = '';
+                    for (var j = 0; j < data.objects.length; j++) {
+                        oh += '<div class="stat-person">' + data.objects[j].object + '<span class="stat-badge">' + data.objects[j].count + '</span></div>';
+                    }
+                    if (oh === '') { oh = '<div class="no-marks">Нет данных</div>'; }
+                    $('statsObjects').innerHTML = oh;
+                })
+                .catch(function () {
+                    $('pinError').textContent = 'Ошибка соединения';
+                });
+        }
 
         /* ---- add record ---- */
         function showAddRecord() {
@@ -572,7 +824,11 @@
             })
             .then(function (r) { return r.json(); })
             .then(function (result) {
-                handleSaveSuccess(result);
+                if (result.success) {
+                    handleSaveSuccess(result);
+                } else {
+                    handleSaveError(result.message || 'Ошибка сохранения');
+                }
             })
             .catch(function (err) {
                 saveLocalFallback(payload);
