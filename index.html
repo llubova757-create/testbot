@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Контроль сотрудников</title>
+    <script src="https://st.max.ru/js/max-web-app.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --bg: #fff;
+            --bg-secondary: #f0f0f0;
+            --bg-tertiary: #e5e5e5;
+            --text: #1a1a1a;
+            --text-secondary: #666;
+            --text-tertiary: #999;
+            --border: #ddd;
+            --primary: #007AFF;
+            --primary-hover: #0056cc;
+            --danger: #ff3b30;
+            --success: #34c759;
+            --radius: 12px;
+            --input-radius: 8px;
+            --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, sans-serif;
+        }
+
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --bg: #1c1c1e;
+                --bg-secondary: #2c2c2e;
+                --bg-tertiary: #3a3a3c;
+                --text: #e5e5e5;
+                --text-secondary: #aaa;
+                --text-tertiary: #777;
+                --border: #3a3a3c;
+                --primary: #0a84ff;
+                --primary-hover: #409cff;
+            }
+        }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            padding: 16px;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 420px;
+        }
+
+        /* Screens */
+        .screen {
+            display: none;
+            animation: fadeIn 0.2s ease;
+        }
+        .screen.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Header */
+        h1 {
+            font-size: 22px;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        h2 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--bg-secondary);
+            border-radius: var(--radius);
+            padding: 20px;
+        }
+
+        /* Form elements */
+        .form-group {
+            margin-bottom: 16px;
+        }
+        .form-label {
+            display: block;
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+            font-weight: 500;
+        }
+        input, select {
+            width: 100%;
+            padding: 14px 16px;
+            border: 1.5px solid var(--border);
+            border-radius: var(--input-radius);
+            font-size: 16px;
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            transition: border-color 0.15s;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        input::placeholder {
+            color: var(--text-tertiary);
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        input:disabled, select:disabled {
+            opacity: 0.5;
+        }
+
+        /* Select arrow */
+        .select-wrapper {
+            position: relative;
+        }
+        .select-wrapper::after {
+            content: '';
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 10px;
+            height: 10px;
+            border-right: 2px solid var(--text-tertiary);
+            border-bottom: 2px solid var(--text-tertiary);
+            transform: translateY(-70%) rotate(45deg);
+            pointer-events: none;
+        }
+        .select-wrapper select {
+            padding-right: 36px;
+            cursor: pointer;
+        }
+
+        /* Buttons */
+        button {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: var(--input-radius);
+            font-size: 16px;
+            font-family: var(--font);
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+        }
+        button:active {
+            transform: scale(0.98);
+        }
+        .btn-primary {
+            background: var(--primary);
+            color: #fff;
+            margin-bottom: 8px;
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: var(--primary-hover);
+        }
+        .btn-primary:disabled {
+            background: var(--primary);
+            opacity: 0.4;
+            cursor: not-allowed;
+        }
+        .btn-secondary {
+            background: var(--bg-tertiary);
+            color: var(--text);
+        }
+        .btn-secondary:hover {
+            background: var(--border);
+        }
+
+        /* Phone button */
+        .phone-field {
+            display: flex;
+            gap: 8px;
+        }
+        .phone-field input {
+            flex: 1;
+        }
+        .btn-phone {
+            width: auto;
+            padding: 14px 18px;
+            background: var(--primary);
+            color: #fff;
+            white-space: nowrap;
+            font-size: 14px;
+        }
+        .phone-confirmed {
+            color: var(--success);
+            font-size: 13px;
+            margin-top: 4px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .phone-confirmed::before {
+            content: '✓';
+            font-weight: bold;
+        }
+
+        /* Date display */
+        .date-display {
+            text-align: center;
+            padding: 14px 16px;
+            background: var(--bg-tertiary);
+            border-radius: var(--input-radius);
+            font-size: 16px;
+            font-weight: 500;
+            margin-bottom: 16px;
+            color: var(--text-secondary);
+        }
+
+        /* Name display in main menu */
+        .user-info {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+        .user-name {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .user-phone {
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        /* Messages */
+        .error {
+            color: var(--danger);
+            text-align: center;
+            font-size: 14px;
+            margin: 8px 0;
+            min-height: 20px;
+        }
+        .success {
+            color: var(--success);
+            text-align: center;
+            font-size: 14px;
+            margin: 8px 0;
+            min-height: 20px;
+        }
+
+        /* Spinner */
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-right: 6px;
+            vertical-align: middle;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Object list loading state */
+        .loading-text {
+            color: var(--text-tertiary);
+            text-align: center;
+            font-size: 14px;
+            padding: 14px;
+        }
+
+        /* Today marks */
+        .today-marks {
+            margin-bottom: 16px;
+        }
+        .today-marks-title {
+            font-size: 13px;
+            color: var(--text-tertiary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+        .today-mark-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            background: var(--bg);
+            border-radius: 8px;
+            margin-bottom: 4px;
+            font-size: 14px;
+        }
+        .today-mark-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--success);
+            flex-shrink: 0;
+        }
+        .today-mark-time {
+            color: var(--text-tertiary);
+            font-size: 12px;
+            margin-left: auto;
+        }
+        .no-marks {
+            text-align: center;
+            color: var(--text-tertiary);
+            font-size: 14px;
+            padding: 8px;
+        }
+
+        /* Admin panel */
+        .pin-input {
+            text-align: center;
+            font-size: 24px;
+            letter-spacing: 12px;
+            padding: 14px 16px;
+            font-family: monospace;
+        }
+        .pin-hint {
+            text-align: center;
+            font-size: 13px;
+            color: var(--text-tertiary);
+            margin-bottom: 12px;
+        }
+        .stat-block {
+            margin-bottom: 16px;
+        }
+        .stat-block h3 {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .stat-person {
+            padding: 8px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        .stat-person:last-child {
+            border-bottom: none;
+        }
+        .stat-person-objects {
+            color: var(--text-secondary);
+            font-size: 13px;
+            margin-top: 2px;
+        }
+        .stat-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: #fff;
+            border-radius: 10px;
+            padding: 1px 8px;
+            font-size: 12px;
+            margin-left: 6px;
+        }
+        .admin-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .admin-actions button {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+
+        <!-- Registration screen -->
+        <div id="registrationScreen" class="screen">
+            <h1>Регистрация</h1>
+            <div class="card">
+                <div class="form-group">
+                    <label class="form-label" for="firstName">Имя</label>
+                    <input type="text" id="firstName" placeholder="Ваше имя" maxlength="50" autocomplete="given-name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="lastName">Фамилия</label>
+                    <input type="text" id="lastName" placeholder="Ваша фамилия" maxlength="50" autocomplete="family-name">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Номер телефона</label>
+                    <div class="phone-field">
+                        <input type="tel" id="phone" placeholder="+79991234567" readonly disabled>
+                        <button type="button" class="btn-phone" id="btnPhone">Подтвердить</button>
+                    </div>
+                    <div id="phoneConfirmed" class="phone-confirmed" style="display:none">Номер подтверждён</div>
+                </div>
+                <button class="btn-primary" id="btnRegister" disabled>Сохранить</button>
+                <div class="error" id="regError"></div>
+            </div>
+        </div>
+
+        <!-- Main menu screen -->
+        <div id="mainMenuScreen" class="screen">
+            <h1 id="mainTitle">Контроль сотрудников</h1>
+            <div class="user-info">
+                <div class="user-name" id="userNameDisplay"></div>
+                <div class="user-phone" id="userPhoneDisplay"></div>
+            </div>
+            <div class="today-marks" id="todayMarks"></div>
+            <button class="btn-primary" id="btnAddRecord">Добавить запись</button>
+        </div>
+
+        <!-- Add record screen -->
+        <div id="addRecordScreen" class="screen">
+            <h1>Новая запись</h1>
+            <div class="card">
+                <div class="date-display" id="currentDate"></div>
+                <div class="form-group">
+                    <label class="form-label" for="objectSelect">Объект</label>
+                    <div class="select-wrapper">
+                        <select id="objectSelect" disabled>
+                            <option value="">Загрузка списка...</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn-primary" id="btnSave" disabled>Сохранить</button>
+                <button class="btn-secondary" id="btnCancel">Отмена</button>
+                <div class="error" id="saveError"></div>
+                <div class="success" id="saveSuccess"></div>
+            </div>
+        </div>
+
+        <!-- Admin panel screen -->
+        <div id="adminScreen" class="screen">
+            <h1>Админ-панель</h1>
+            <div class="card" id="adminLogin">
+                <div class="pin-hint">Введите PIN-код</div>
+                <input type="password" id="pinInput" class="pin-input" placeholder="****" maxlength="4" autocomplete="off" inputmode="numeric" pattern="[0-9]*">
+                <button class="btn-primary" id="btnPinSubmit">Войти</button>
+                <button class="btn-secondary" id="btnPinBack">Назад</button>
+                <div class="error" id="pinError"></div>
+            </div>
+            <div class="card" id="adminDashboard" style="display:none">
+                <div class="stat-block">
+                    <h3 id="statsDate"></h3>
+                    <div id="statsPeople"></div>
+                </div>
+                <div class="stat-block">
+                    <h3>По объектам</h3>
+                    <div id="statsObjects"></div>
+                </div>
+                <div class="admin-actions">
+                    <button class="btn-primary" id="btnRefreshStats">Обновить</button>
+                    <button class="btn-secondary" id="btnAdminBack">Назад</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+    (function () {
+        var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwa0ntvtqSZN-7VI9HSLla7hBej8nU-xhz4gXd6DcQt6TcnMr6v5RmesS4gkxQfAp-55Q/exec';
+
+        var userData = { firstName: '', lastName: '', phone: '' };
+        var objects = [];
+        var phoneConfirmed = false;
+        var isSaving = false;
+
+        var maxUser = { userId: 0, chatId: 0, chatType: '' };
+        var isMaxEnv = false;
+
+        function $(id) { return document.getElementById(id); }
+
+        /* ---- screens ---- */
+        function showScreen(id) {
+            var screens = document.querySelectorAll('.screen');
+            for (var i = 0; i < screens.length; i++) {
+                screens[i].classList.remove('active');
+            }
+            $(id).classList.add('active');
+        }
+
+        /* ---- MAX Bridge ---- */
+        function initMaxBridge() {
+            if (typeof window.WebApp === 'undefined') { return; }
+            isMaxEnv = true;
+
+            var data = window.WebApp.initDataUnsafe;
+            if (data && data.user) {
+                maxUser.userId = data.user.id || 0;
+                if (data.user.first_name && !userData.firstName) {
+                    $('firstName').value = data.user.first_name;
+                }
+                if (data.user.last_name && !userData.lastName) {
+                    $('lastName').value = data.user.last_name;
+                }
+            }
+            if (data && data.chat) {
+                maxUser.chatId = data.chat.id || 0;
+                maxUser.chatType = data.chat.type || '';
+            }
+        }
+
+        /* ---- registration validation ---- */
+        function updateRegisterButton() {
+            var fn = $('firstName').value.trim();
+            var ln = $('lastName').value.trim();
+            $('btnRegister').disabled = !(fn && ln && phoneConfirmed);
+        }
+
+        $('firstName').addEventListener('input', updateRegisterButton);
+        $('lastName').addEventListener('input', updateRegisterButton);
+
+        /* ---- phone request ---- */
+        $('btnPhone').addEventListener('click', function () {
+            if (isMaxEnv && window.WebApp.requestContact) {
+                $('btnPhone').disabled = true;
+                $('btnPhone').innerHTML = '<span class="spinner"></span>Запрос...';
+
+                window.WebApp.requestContact().then(function (result) {
+                    $('phone').value = result.phone || '';
+                    phoneConfirmed = true;
+                    $('phoneConfirmed').style.display = 'flex';
+                    $('btnPhone').style.display = 'none';
+                    $('phone').disabled = false;
+                    $('phone').readOnly = true;
+                    updateRegisterButton();
+                }).catch(function () {
+                    enableManualPhone();
+                    $('regError').textContent = 'Введите номер вручную';
+                });
+            } else {
+                enableManualPhone();
+            }
+        });
+
+        function enableManualPhone() {
+            $('phone').disabled = false;
+            $('phone').readOnly = false;
+            $('phone').placeholder = '+79991234567';
+            $('phone').value = '';
+            $('btnPhone').disabled = false;
+            $('btnPhone').textContent = 'Подтвердить';
+            $('regError').textContent = '';
+            $('phone').addEventListener('input', function () {
+                phoneConfirmed = $('phone').value.trim().length >= 10;
+                $('phoneConfirmed').style.display = phoneConfirmed ? 'flex' : 'none';
+                updateRegisterButton();
+            });
+        }
+
+        /* ---- registration ---- */
+        $('btnRegister').addEventListener('click', function () {
+            userData.firstName = $('firstName').value.trim();
+            userData.lastName = $('lastName').value.trim();
+            userData.phone = $('phone').value.trim();
+
+            if (!userData.firstName || !userData.lastName || !userData.phone) {
+                $('regError').textContent = 'Заполните все поля';
+                return;
+            }
+
+            localStorage.setItem('userData', JSON.stringify(userData));
+            $('regError').textContent = '';
+            showMainMenu();
+        });
+
+        /* ---- main menu ---- */
+        function showMainMenu() {
+            $('userNameDisplay').textContent = userData.firstName + ' ' + userData.lastName;
+            $('userPhoneDisplay').textContent = formatPhone(userData.phone);
+            showScreen('mainMenuScreen');
+            loadTodayMarks();
+        }
+
+        function loadTodayMarks() {
+            var container = $('todayMarks');
+            container.innerHTML = '<div class="loading-text">Загрузка...</div>';
+
+            if (!APPS_SCRIPT_URL || !maxUser.userId) {
+                container.innerHTML = '';
+                return;
+            }
+
+            fetch(APPS_SCRIPT_URL + '?action=today&userId=' + maxUser.userId)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    var marks = data.marks || [];
+                    if (marks.length === 0) {
+                        container.innerHTML = '<div class="no-marks">Сегодня ещё нет отметок</div>';
+                        return;
+                    }
+                    var h = '<div class="today-marks-title">Сегодня отмечено</div>';
+                    for (var i = 0; i < marks.length; i++) {
+                        var time = '';
+                        try {
+                            var d = new Date(marks[i].timestamp);
+                            time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+                        } catch (e) {}
+                        h += '<div class="today-mark-item"><div class="today-mark-dot"></div>' + marks[i].object + '<div class="today-mark-time">' + time + '</div></div>';
+                    }
+                    container.innerHTML = h;
+                })
+                .catch(function () {
+                    container.innerHTML = '';
+                });
+        }
+
+        function formatPhone(p) {
+            if (!p) return '';
+            p = p.replace(/\D/g, '');
+            if (p.length === 11) {
+                return '+7 ' + p.slice(1, 4) + ' ' + p.slice(4, 7) + '-' + p.slice(7, 9) + '-' + p.slice(9, 11);
+            }
+            if (p.length === 10) {
+                return '+7 ' + p.slice(0, 3) + ' ' + p.slice(3, 6) + '-' + p.slice(6, 8) + '-' + p.slice(8, 10);
+            }
+            return p;
+        }
+
+        $('btnAddRecord').addEventListener('click', function () {
+            showAddRecord();
+        });
+
+        /* ---- admin panel (long press on title) ---- */
+        var pressTimer;
+        $('mainTitle').addEventListener('pointerdown', function (e) {
+            pressTimer = setTimeout(function () {
+                showAdminLogin();
+            }, 1200);
+        });
+        $('mainTitle').addEventListener('pointerup', function () {
+            clearTimeout(pressTimer);
+        });
+        $('mainTitle').addEventListener('pointermove', function () {
+            clearTimeout(pressTimer);
+        });
+
+        function showAdminLogin() {
+            $('pinInput').value = '';
+            $('pinError').textContent = '';
+            $('adminLogin').style.display = '';
+            $('adminDashboard').style.display = 'none';
+            showScreen('adminScreen');
+        }
+
+        $('btnPinSubmit').addEventListener('click', function () {
+            var pin = $('pinInput').value.trim();
+            if (!pin) {
+                $('pinError').textContent = 'Введите PIN';
+                return;
+            }
+            loadAdminStats(pin);
+        });
+
+        $('pinInput').addEventListener('keydown', function (e) {
+            if (e.key === 'Enter') {
+                $('btnPinSubmit').click();
+            }
+        });
+
+        $('btnPinBack').addEventListener('click', function () {
+            showMainMenu();
+        });
+
+        $('btnAdminBack').addEventListener('click', function () {
+            showMainMenu();
+        });
+
+        $('btnRefreshStats').addEventListener('click', function () {
+            var pin = $('pinInput').value.trim();
+            loadAdminStats(pin);
+        });
+
+        function loadAdminStats(pin) {
+            $('pinError').textContent = '';
+            $('adminDashboard').style.display = 'none';
+
+            if (!APPS_SCRIPT_URL) {
+                $('pinError').textContent = 'API не настроен';
+                return;
+            }
+
+            fetch(APPS_SCRIPT_URL + '?action=stats&pin=' + encodeURIComponent(pin))
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.error) {
+                        $('pinError').textContent = data.error;
+                        return;
+                    }
+
+                    $('adminLogin').style.display = 'none';
+                    $('adminDashboard').style.display = '';
+
+                    $('statsDate').textContent = 'Отчёт за ' + (data.today || 'сегодня');
+
+                    var ph = '';
+                    if (data.totalToday === 0) {
+                        ph = '<div class="no-marks">Нет отметок</div>';
+                    } else {
+                        for (var i = 0; i < data.people.length; i++) {
+                            var p = data.people[i];
+                            ph += '<div class="stat-person"><strong>' + p.name + '</strong>';
+                            if (p.phone) { ph += ' &middot; ' + p.phone; }
+                            ph += '<div class="stat-person-objects">' + p.objects.join(', ') + '</div></div>';
+                        }
+                    }
+                    $('statsPeople').innerHTML = ph;
+
+                    var oh = '';
+                    for (var j = 0; j < data.objects.length; j++) {
+                        oh += '<div class="stat-person">' + data.objects[j].object + '<span class="stat-badge">' + data.objects[j].count + '</span></div>';
+                    }
+                    if (oh === '') { oh = '<div class="no-marks">Нет данных</div>'; }
+                    $('statsObjects').innerHTML = oh;
+                })
+                .catch(function () {
+                    $('pinError').textContent = 'Ошибка соединения';
+                });
+        }
+
+        /* ---- add record ---- */
+        function showAddRecord() {
+            $('saveError').textContent = '';
+            $('saveSuccess').textContent = '';
+            $('btnSave').disabled = true;
+            $('objectSelect').disabled = true;
+            $('objectSelect').innerHTML = '<option value="">Загрузка списка...</option>';
+
+            var now = new Date();
+            var dd = String(now.getDate()).padStart(2, '0');
+            var mm = String(now.getMonth() + 1).padStart(2, '0');
+            var yy = now.getFullYear();
+            var hh = String(now.getHours()).padStart(2, '0');
+            var min = String(now.getMinutes()).padStart(2, '0');
+            $('currentDate').textContent = dd + '.' + mm + '.' + yy + '  ' + hh + ':' + min;
+
+            showScreen('addRecordScreen');
+            loadObjects();
+        }
+
+        function loadObjects() {
+            if (!APPS_SCRIPT_URL) {
+                useDefaultObjects();
+                return;
+            }
+
+            fetch(APPS_SCRIPT_URL + '?action=objects')
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    objects = data.objects || [];
+                    renderObjectSelect();
+                })
+                .catch(function () {
+                    useDefaultObjects();
+                });
+        }
+
+        function useDefaultObjects() {
+            objects = ['Объект 1', 'Объект 2', 'Объект 3'];
+            renderObjectSelect();
+        }
+
+        function renderObjectSelect() {
+            var select = $('objectSelect');
+            select.innerHTML = '<option value="">Выберите объект</option>';
+            for (var i = 0; i < objects.length; i++) {
+                var opt = document.createElement('option');
+                opt.value = objects[i];
+                opt.textContent = objects[i];
+                select.appendChild(opt);
+            }
+            select.disabled = false;
+        }
+
+        $('objectSelect').addEventListener('change', function () {
+            $('btnSave').disabled = !$('objectSelect').value;
+        });
+
+        /* ---- save record ---- */
+        $('btnSave').addEventListener('click', function () {
+            if (isSaving) return;
+            var object = $('objectSelect').value;
+            if (!object) {
+                $('saveError').textContent = 'Выберите объект';
+                return;
+            }
+
+            isSaving = true;
+            $('btnSave').disabled = true;
+            $('btnSave').innerHTML = '<span class="spinner"></span>Сохранение...';
+            $('saveError').textContent = '';
+
+            var now = new Date();
+            var dd = String(now.getDate()).padStart(2, '0');
+            var mm = String(now.getMonth() + 1).padStart(2, '0');
+            var yy = now.getFullYear();
+            var dateStr = dd + '.' + mm + '.' + yy;
+
+            var payload = {
+                date: dateStr,
+                name: userData.firstName + ' ' + userData.lastName,
+                phone: userData.phone,
+                object: object,
+                userId: maxUser.userId,
+                chatId: maxUser.chatId,
+                chatType: maxUser.chatType
+            };
+
+            if (!APPS_SCRIPT_URL) {
+                saveLocalFallback(payload);
+                return;
+            }
+
+            fetch(APPS_SCRIPT_URL, {
+                method: 'POST',
+                body: JSON.stringify(payload)
+            })
+            .then(function (r) { return r.json(); })
+            .then(function (result) {
+                if (result.success) {
+                    handleSaveSuccess(result);
+                } else {
+                    handleSaveError(result.message || 'Ошибка сохранения');
+                }
+            })
+            .catch(function (err) {
+                saveLocalFallback(payload);
+            });
+        });
+
+        function saveLocalFallback(payload) {
+            try {
+                var records = JSON.parse(localStorage.getItem('records') || '[]');
+                records.push(payload);
+                localStorage.setItem('records', JSON.stringify(records));
+                handleSaveSuccess({ success: true, local: true });
+            } catch (e) {
+                handleSaveError('Ошибка сохранения');
+            }
+        }
+
+        function handleSaveSuccess(result) {
+            $('saveSuccess').textContent = 'Запись сохранена!';
+            $('btnSave').innerHTML = 'Сохранить';
+
+            setTimeout(function () {
+                if (isMaxEnv && window.WebApp && window.WebApp.close) {
+                    window.WebApp.close();
+                } else {
+                    isSaving = false;
+                    showMainMenu();
+                }
+            }, 1200);
+        }
+
+        function handleSaveError(msg) {
+            $('saveError').textContent = msg;
+            $('btnSave').innerHTML = 'Сохранить';
+            $('btnSave').disabled = false;
+            isSaving = false;
+        }
+
+        /* ---- cancel ---- */
+        $('btnCancel').addEventListener('click', function () {
+            showMainMenu();
+        });
+
+        /* ---- init ---- */
+        function init() {
+            var stored = localStorage.getItem('userData');
+            if (stored) {
+                try {
+                    userData = JSON.parse(stored);
+                    if (userData.firstName && userData.lastName && userData.phone) {
+                        showMainMenu();
+                        return;
+                    }
+                } catch (e) {}
+            }
+            initMaxBridge();
+            showScreen('registrationScreen');
+            updateRegisterButton();
+        }
+
+        init();
+    })();
+    </script>
+</body>
+</html>
