@@ -509,8 +509,14 @@
                     <h3>По объектам</h3>
                     <div id="statsObjects"></div>
                 </div>
+                <div class="stat-block">
+                    <h3>Текст отчёта</h3>
+                    <textarea id="reportText" readonly style="width:100%;min-height:80px;padding:10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text);resize:none;margin-bottom:8px;font-family:var(--font)"></textarea>
+                    <button class="btn-secondary btn-small" id="btnCopyReport">Скопировать текст отчёта</button>
+                </div>
                 <div class="admin-actions">
                     <button class="btn-primary" id="btnRefreshStats">Обновить</button>
+                    <button class="btn-secondary" id="btnSendReport">Отправить отчёт ботом</button>
                     <button class="btn-secondary" id="btnAdminBack">Назад</button>
                 </div>
             </div>
@@ -535,7 +541,7 @@
 
     <script>
     (function () {
-        var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzryoeQPgWcSUFt72dRqpXaRWvj0QqmXehS-6L1aXYWreKIwaIlPxyHD-jqQR9Z1yeSQQ/exec';
+        var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzzcGfDKNqmogCCK8o2cVMnuQNrJf9OULfCaKRQjb2XYXi8BlaeETv-tYq4Jui2FZtj-w/exec';
 
         var userData = { firstName: '', lastName: '', phone: '' };
         var objects = [];
@@ -543,6 +549,7 @@
         var isSaving = false;
 
         var maxUser = { userId: 0, chatId: 0, chatType: '' };
+        var adminUserId = 0;
         var isMaxEnv = false;
 
         function $(id) { return document.getElementById(id); }
@@ -820,9 +827,59 @@
             loadAdminStats(pin);
         });
 
+        $('btnSendReport').addEventListener('click', function () {
+            var pin = $('pinInput').value.trim();
+            if (!APPS_SCRIPT_URL) { return; }
+            $('pinError').textContent = 'Отправка...';
+            $('btnSendReport').disabled = true;
+
+            if (!adminUserId) {
+                $('pinError').textContent = 'Не получен ID. Откройте панель через MAX.';
+                $('btnSendReport').disabled = false;
+                return;
+            }
+
+            fetch(APPS_SCRIPT_URL + '?action=sendReport&pin=' + encodeURIComponent(pin) + '&userId=' + adminUserId)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.error) {
+                        $('pinError').textContent = data.error;
+                    } else if (data.success) {
+                        $('pinError').textContent = '';
+                        alert('Отчёт отправлен в чат с ботом!');
+                    } else {
+                        $('pinError').textContent = 'Ошибка отправки';
+                    }
+                    $('btnSendReport').disabled = false;
+                })
+                .catch(function () {
+                    $('pinError').textContent = 'Ошибка соединения';
+                    $('btnSendReport').disabled = false;
+                });
+        });
+
+        $('btnCopyReport').addEventListener('click', function () {
+            var text = $('reportText').value;
+            if (!text) return;
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function () {
+                    alert('Отчёт скопирован!');
+                }).catch(function () {
+                    $('reportText').select();
+                    document.execCommand('copy');
+                    alert('Отчёт скопирован!');
+                });
+            } else {
+                $('reportText').select();
+                document.execCommand('copy');
+                alert('Отчёт скопирован!');
+            }
+        });
+
         function loadAdminStats(pin) {
             $('pinError').textContent = '';
             $('adminDashboard').style.display = 'none';
+            adminUserId = maxUser.userId || 0;
 
             if (!APPS_SCRIPT_URL) {
                 $('pinError').textContent = 'API не настроен';
@@ -861,6 +918,25 @@
                     }
                     if (oh === '') { oh = '<div class="no-marks">Нет данных</div>'; }
                     $('statsObjects').innerHTML = oh;
+
+                    // Строим текст отчёта
+                    var reportLines = ['📊 Отчёт за ' + (data.today || 'сегодня'), ''];
+                    for (var k = 0; k < data.people.length; k++) {
+                        var pp = data.people[k];
+                        reportLines.push('👤 ' + pp.name + (pp.phone ? ' · ' + pp.phone : ''));
+                        reportLines.push('   📍 ' + pp.objects.join(', '));
+                    }
+                    if (data.objects.length > 0) {
+                        reportLines.push('');
+                        reportLines.push('📍 По объектам:');
+                        for (var m = 0; m < data.objects.length; m++) {
+                            reportLines.push('   ' + data.objects[m].object + ': ' + data.objects[m].count + ' чел.');
+                        }
+                    }
+                    reportLines.push('');
+                    reportLines.push('Всего отметилось: ' + data.totalToday + ' чел.');
+                    var reportText = reportLines.join('\n');
+                    $('reportText').value = reportText;
                 })
                 .catch(function () {
                     $('pinError').textContent = 'Ошибка соединения';
