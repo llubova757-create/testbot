@@ -321,7 +321,11 @@
             padding: 8px;
         }
 
-        /* Admin panel */
+        .btn-small {
+            padding: 10px;
+            font-size: 14px;
+            margin-top: 8px;
+        }
         .pin-input {
             text-align: center;
             font-size: 24px;
@@ -374,6 +378,55 @@
         .admin-actions button {
             flex: 1;
         }
+
+        /* History screen */
+        .period-buttons {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .period-btn {
+            flex: 1;
+            padding: 10px;
+            font-size: 14px;
+            background: var(--bg-tertiary);
+            color: var(--text);
+            border: none;
+            border-radius: 8px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .period-btn.active {
+            background: var(--primary);
+            color: #fff;
+        }
+        .history-list {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 14px;
+        }
+        .history-item:last-child {
+            border-bottom: none;
+        }
+        .history-date {
+            color: var(--text-secondary);
+            font-size: 13px;
+            min-width: 60px;
+        }
+        .history-object {
+            flex: 1;
+        }
+        .history-time {
+            color: var(--text-tertiary);
+            font-size: 12px;
+        }
     </style>
 </head>
 <body>
@@ -413,6 +466,8 @@
             </div>
             <div class="today-marks" id="todayMarks"></div>
             <button class="btn-primary" id="btnAddRecord">Добавить запись</button>
+            <button class="btn-secondary btn-small" id="btnHistory">Моя история</button>
+            <button class="btn-secondary btn-small" id="btnOpenAdmin">Админ-панель</button>
         </div>
 
         <!-- Add record screen -->
@@ -461,11 +516,26 @@
             </div>
         </div>
 
+        <!-- History screen -->
+        <div id="historyScreen" class="screen">
+            <h1>Моя история</h1>
+            <div class="card">
+                <div class="period-buttons">
+                    <button class="period-btn active" id="btnPeriod7">За 7 дней</button>
+                    <button class="period-btn" id="btnPeriod30">За 30 дней</button>
+                </div>
+                <div class="history-list" id="historyList">
+                    <div class="loading-text">Загрузка...</div>
+                </div>
+                <button class="btn-secondary btn-small" id="btnHistoryBack" style="margin-top:12px">Назад</button>
+            </div>
+        </div>
+
     </div>
 
     <script>
     (function () {
-        var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwQF0Y2dFD13LPrOyaaB8DNP5ghSTs8bH8okWswi8DRPgzdK1kQ4IYttIYvR1YdbFGA0A/exec';
+        var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbzryoeQPgWcSUFt72dRqpXaRWvj0QqmXehS-6L1aXYWreKIwaIlPxyHD-jqQR9Z1yeSQQ/exec';
 
         var userData = { firstName: '', lastName: '', phone: '' };
         var objects = [];
@@ -627,6 +697,78 @@
         $('btnAddRecord').addEventListener('click', function () {
             showAddRecord();
         });
+
+        $('btnOpenAdmin').addEventListener('click', function () {
+            showAdminLogin();
+        });
+
+        /* ---- history screen ---- */
+        var historyDays = 7;
+
+        $('btnHistory').addEventListener('click', function () {
+            historyDays = 7;
+            updatePeriodButtons();
+            showScreen('historyScreen');
+            loadHistory();
+        });
+
+        $('btnPeriod7').addEventListener('click', function () {
+            historyDays = 7;
+            updatePeriodButtons();
+            loadHistory();
+        });
+
+        $('btnPeriod30').addEventListener('click', function () {
+            historyDays = 30;
+            updatePeriodButtons();
+            loadHistory();
+        });
+
+        $('btnHistoryBack').addEventListener('click', function () {
+            showMainMenu();
+        });
+
+        function updatePeriodButtons() {
+            $('btnPeriod7').classList.toggle('active', historyDays === 7);
+            $('btnPeriod30').classList.toggle('active', historyDays === 30);
+        }
+
+        function loadHistory() {
+            var list = $('historyList');
+            list.innerHTML = '<div class="loading-text">Загрузка...</div>';
+
+            if (!APPS_SCRIPT_URL || !maxUser.userId) {
+                list.innerHTML = '<div class="no-marks">Нет данных</div>';
+                return;
+            }
+
+            fetch(APPS_SCRIPT_URL + '?action=history&userId=' + maxUser.userId + '&days=' + historyDays)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    var records = data.records || [];
+                    if (records.length === 0) {
+                        list.innerHTML = '<div class="no-marks">Нет записей за этот период</div>';
+                        return;
+                    }
+                    var h = '';
+                    for (var i = 0; i < records.length; i++) {
+                        var time = '';
+                        try {
+                            var d = new Date(records[i].timestamp);
+                            time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+                        } catch (e) {}
+                        h += '<div class="history-item">';
+                        h += '<div class="history-date">' + records[i].date + '</div>';
+                        h += '<div class="history-object">' + records[i].object + '</div>';
+                        h += '<div class="history-time">' + time + '</div>';
+                        h += '</div>';
+                    }
+                    list.innerHTML = h;
+                })
+                .catch(function () {
+                    list.innerHTML = '<div class="no-marks">Ошибка загрузки</div>';
+                });
+        }
 
         /* ---- admin panel (long press on title) ---- */
         var pressTimer;
