@@ -240,6 +240,25 @@
             font-size: 14px;
             color: var(--text-secondary);
         }
+        .user-status {
+            margin-top: 8px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            display: inline-block;
+        }
+        .user-status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .user-status.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        .user-status.rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
 
         /* Messages */
         .error {
@@ -255,6 +274,85 @@
             font-size: 14px;
             margin: 8px 0;
             min-height: 20px;
+        }
+
+        /* Profile */
+        .profile-info {
+            text-align: center;
+            padding: 12px;
+        }
+        .profile-name {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .profile-phone {
+            color: var(--text-secondary);
+            font-size: 14px;
+        }
+        .profile-status {
+            margin-top: 8px;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+        .profile-status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .profile-status.active {
+            background: #d4edda;
+            color: #155724;
+        }
+        .profile-status.rejected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .toggle-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border);
+        }
+        .toggle {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 28px;
+        }
+        .toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: var(--bg-tertiary);
+            transition: 0.3s;
+            border-radius: 28px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 22px;
+            width: 22px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        .toggle input:checked + .toggle-slider {
+            background-color: var(--primary);
+        }
+        .toggle input:checked + .toggle-slider:before {
+            transform: translateX(22px);
         }
 
         /* Spinner */
@@ -463,10 +561,13 @@
             <div class="user-info">
                 <div class="user-name" id="userNameDisplay"></div>
                 <div class="user-phone" id="userPhoneDisplay"></div>
+                <div class="user-status" id="userStatusDisplay"></div>
             </div>
             <div class="today-marks" id="todayMarks"></div>
             <button class="btn-primary" id="btnAddRecord">Добавить запись</button>
+            <button class="btn-secondary btn-small" id="btnMyRecords">Мои записи</button>
             <button class="btn-secondary btn-small" id="btnHistory">Моя история</button>
+            <button class="btn-secondary btn-small" id="btnProfile">Профиль</button>
             <button class="btn-secondary btn-small" id="btnOpenAdmin">Админ-панель</button>
         </div>
 
@@ -517,6 +618,7 @@
                 <div class="admin-actions">
                     <button class="btn-primary" id="btnRefreshStats">Обновить</button>
                     <button class="btn-secondary" id="btnSendReport">Отправить отчёт ботом</button>
+                    <button class="btn-secondary" id="btnPendingEmployees">Новые сотрудники</button>
                     <button class="btn-secondary" id="btnAdminBack">Назад</button>
                 </div>
             </div>
@@ -537,11 +639,75 @@
             </div>
         </div>
 
+        <!-- My records today screen -->
+        <div id="myRecordsScreen" class="screen">
+            <h1>Мои записи сегодня</h1>
+            <div class="card">
+                <div class="history-list" id="myRecordsList">
+                    <div class="loading-text">Загрузка...</div>
+                </div>
+                <button class="btn-secondary btn-small" id="btnMyRecordsBack">Назад</button>
+            </div>
+        </div>
+
+        <!-- Edit record screen -->
+        <div id="editRecordScreen" class="screen">
+            <h1>Редактирование</h1>
+            <div class="card">
+                <div class="form-group">
+                    <label class="form-label">Объект</label>
+                    <div class="select-wrapper">
+                        <select id="editObjectSelect">
+                            <option value="">Загрузка...</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn-primary" id="btnSaveEdit">Сохранить</button>
+                <button class="btn-secondary" id="btnCancelEdit">Отмена</button>
+                <div class="error" id="editError"></div>
+            </div>
+        </div>
+
+        <!-- Profile screen -->
+        <div id="profileScreen" class="screen">
+            <h1>Профиль</h1>
+            <div class="card">
+                <div class="profile-info">
+                    <div class="profile-name" id="profileName"></div>
+                    <div class="profile-phone" id="profilePhone"></div>
+                    <div class="profile-status" id="profileStatus"></div>
+                </div>
+                <div class="form-group" style="margin-top:16px">
+                    <label class="form-label">Настройки</label>
+                    <div class="toggle-row">
+                        <span>Напоминания о регистрации</span>
+                        <label class="toggle">
+                            <input type="checkbox" id="remindersToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+                <div id="profileMessage" class="success" style="margin-top:12px"></div>
+                <button class="btn-secondary btn-small" id="btnProfileBack" style="margin-top:16px">Назад</button>
+            </div>
+        </div>
+
+        <!-- Pending employees screen -->
+        <div id="pendingEmployeesScreen" class="screen">
+            <h1>Новые сотрудники</h1>
+            <div class="card">
+                <div class="history-list" id="pendingList">
+                    <div class="loading-text">Загрузка...</div>
+                </div>
+                <button class="btn-secondary btn-small" id="btnPendingBack">Назад</button>
+            </div>
+        </div>
+
     </div>
 
     <script>
     (function () {
-        var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxkS-milh7b1zpOgwV_Gg5zGdaT8DDTNpB0IAH06GoYhOf2LiUkbQU2v2a-9SdUb9iWJA/exec';
+        var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7vY6WUKvLcGvdvsGfMzS9ttFiYUCU93sSu8ivPG3XB4lxwT_O8On-3vwPIEq9DX-4HA/exec';
 
         var userData = { firstName: '', lastName: '', phone: '' };
         var objects = [];
@@ -644,8 +810,33 @@
             }
 
             localStorage.setItem('userData', JSON.stringify(userData));
-            $('regError').textContent = '';
-            showMainMenu();
+            $('btnRegister').disabled = true;
+            $('btnRegister').innerHTML = '<span class="spinner"></span>Отправка...';
+
+            var fullName = userData.firstName + ' ' + userData.lastName;
+
+            if (APPS_SCRIPT_URL && maxUser.userId) {
+                fetch(APPS_SCRIPT_URL + '?action=register&name=' + encodeURIComponent(fullName) + '&phone=' + encodeURIComponent(userData.phone) + '&userId=' + maxUser.userId)
+                    .then(function (r) { return r.json(); })
+                    .then(function (data) {
+                        $('btnRegister').disabled = false;
+                        $('btnRegister').innerHTML = 'Сохранить';
+                        if (data.success) {
+                            alert('Заявка отправлена на подтверждение!');
+                            showMainMenu();
+                        } else {
+                            $('regError').textContent = data.message || 'Ошибка регистрации';
+                        }
+                    })
+                    .catch(function () {
+                        $('btnRegister').disabled = false;
+                        $('btnRegister').innerHTML = 'Сохранить';
+                        $('regError').textContent = 'Ошибка соединения';
+                    });
+            } else {
+                $('regError').textContent = '';
+                showMainMenu();
+            }
         });
 
         /* ---- main menu ---- */
@@ -654,6 +845,34 @@
             $('userPhoneDisplay').textContent = formatPhone(userData.phone);
             showScreen('mainMenuScreen');
             loadTodayMarks();
+            loadMainMenuStatus();
+        }
+
+        function loadMainMenuStatus() {
+            var statusEl = $('userStatusDisplay');
+            statusEl.innerHTML = '';
+            statusEl.style.display = 'none';
+
+            if (!APPS_SCRIPT_URL || !maxUser.userId) return;
+
+            fetch(APPS_SCRIPT_URL + '?action=profile&userId=' + maxUser.userId)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (!data.registered) {
+                        statusEl.textContent = 'Не зарегистрирован';
+                        statusEl.className = 'user-status';
+                        statusEl.style.display = 'inline-block';
+                    } else if (data.status === 'pending') {
+                        statusEl.textContent = 'На рассмотрении';
+                        statusEl.className = 'user-status pending';
+                        statusEl.style.display = 'inline-block';
+                    } else if (data.status === 'rejected') {
+                        statusEl.textContent = 'Отклонён';
+                        statusEl.className = 'user-status rejected';
+                        statusEl.style.display = 'inline-block';
+                    }
+                })
+                .catch(function () {});
         }
 
         function loadTodayMarks() {
@@ -876,6 +1095,12 @@
             }
         });
 
+        $('btnPendingEmployees').addEventListener('click', function () {
+            $('adminDashboard').style.display = 'none';
+            showScreen('pendingEmployeesScreen');
+            loadPendingEmployees();
+        });
+
         function loadAdminStats(pin) {
             $('pinError').textContent = '';
             $('adminDashboard').style.display = 'none';
@@ -1090,6 +1315,221 @@
             showMainMenu();
         });
 
+        /* ---- my records ---- */
+        var editingRecord = null;
+
+        $('btnMyRecords').addEventListener('click', function () {
+            showScreen('myRecordsScreen');
+            loadMyRecords();
+        });
+
+        $('btnMyRecordsBack').addEventListener('click', function () {
+            showMainMenu();
+        });
+
+        function loadMyRecords() {
+            var list = $('myRecordsList');
+            list.innerHTML = '<div class="loading-text">Загрузка...</div>';
+
+            if (!APPS_SCRIPT_URL || !maxUser.userId) {
+                list.innerHTML = '<div class="no-marks">Нет данных</div>';
+                return;
+            }
+
+            fetch(APPS_SCRIPT_URL + '?action=today&userId=' + maxUser.userId)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    var marks = data.marks || [];
+                    if (marks.length === 0) {
+                        list.innerHTML = '<div class="no-marks">Сегодня нет записей</div>';
+                        return;
+                    }
+                    var h = '';
+                    for (var i = 0; i < marks.length; i++) {
+                        var time = '';
+                        try {
+                            var d = new Date(marks[i].timestamp);
+                            time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+                        } catch (e) {}
+                        h += '<div class="history-item">';
+                        h += '<div class="history-object">' + marks[i].object + '</div>';
+                        h += '<div class="history-time">' + time + '</div>';
+                        h += '</div>';
+                    }
+                    list.innerHTML = h;
+                })
+                .catch(function () {
+                    list.innerHTML = '<div class="no-marks">Ошибка загрузки</div>';
+                });
+        }
+
+        /* ---- edit record ---- */
+        $('btnCancelEdit').addEventListener('click', function () {
+            showScreen('myRecordsScreen');
+        });
+
+        $('btnSaveEdit').addEventListener('click', function () {
+            if (!editingRecord || !APPS_SCRIPT_URL) return;
+            var newObject = $('editObjectSelect').value;
+            if (!newObject) {
+                $('editError').textContent = 'Выберите объект';
+                return;
+            }
+            $('editError').textContent = 'Сохранение...';
+            $('btnSaveEdit').disabled = true;
+
+            fetch(APPS_SCRIPT_URL + '?action=updateRecord&row=' + editingRecord.row + '&object=' + encodeURIComponent(newObject))
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        $('editError').textContent = '';
+                        alert('Объект обновлён!');
+                        showScreen('myRecordsScreen');
+                        loadMyRecords();
+                    } else {
+                        $('editError').textContent = data.message || 'Ошибка';
+                    }
+                    $('btnSaveEdit').disabled = false;
+                })
+                .catch(function () {
+                    $('editError').textContent = 'Ошибка соединения';
+                    $('btnSaveEdit').disabled = false;
+                });
+        });
+
+        /* ---- profile ---- */
+        var employeeProfile = null;
+
+        $('btnProfile').addEventListener('click', function () {
+            showScreen('profileScreen');
+            loadProfile();
+        });
+
+        $('btnProfileBack').addEventListener('click', function () {
+            showMainMenu();
+        });
+
+        $('remindersToggle').addEventListener('change', function () {
+            if (!employeeProfile || employeeProfile.status !== 'active') return;
+            var enabled = $('remindersToggle').checked;
+            saveRemindersSetting(enabled);
+        });
+
+        function loadProfile() {
+            if (!APPS_SCRIPT_URL || !maxUser.userId) {
+                $('profileName').textContent = userData.firstName + ' ' + userData.lastName;
+                $('profilePhone').textContent = formatPhone(userData.phone);
+                $('profileStatus').textContent = 'Статус неизвестен';
+                $('profileStatus').className = 'profile-status';
+                return;
+            }
+
+            fetch(APPS_SCRIPT_URL + '?action=profile&userId=' + maxUser.userId)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    employeeProfile = data;
+                    $('profileName').textContent = data.name || userData.firstName + ' ' + userData.lastName;
+                    $('profilePhone').textContent = formatPhone(data.phone || userData.phone);
+
+                    var statusEl = $('profileStatus');
+                    if (!data.registered) {
+                        statusEl.textContent = 'Не зарегистрирован';
+                        statusEl.className = 'profile-status';
+                    } else {
+                        statusEl.textContent = data.status === 'active' ? 'Подтверждён' : (data.status === 'pending' ? 'На рассмотрении' : 'Отклонён');
+                        statusEl.className = 'profile-status ' + data.status;
+                    }
+
+                    if (data.registered && data.status === 'active') {
+                        $('remindersToggle').parentElement.parentElement.style.display = '';
+                        $('remindersToggle').checked = data.remindersEnabled;
+                    } else {
+                        $('remindersToggle').parentElement.parentElement.style.display = 'none';
+                    }
+                })
+                .catch(function () {
+                    $('profileName').textContent = userData.firstName + ' ' + userData.lastName;
+                    $('profilePhone').textContent = formatPhone(userData.phone);
+                    $('profileStatus').textContent = 'Ошибка загрузки';
+                });
+        }
+
+        function saveRemindersSetting(enabled) {
+            if (!APPS_SCRIPT_URL || !maxUser.userId) return;
+            $('profileMessage').textContent = 'Сохранение...';
+            fetch(APPS_SCRIPT_URL + '?action=updateReminders&userId=' + maxUser.userId + '&enabled=' + enabled)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    $('profileMessage').textContent = data.success ? (enabled ? 'Напоминания включены' : 'Напоминания выключены') : data.message;
+                })
+                .catch(function () {
+                    $('profileMessage').textContent = 'Ошибка сохранения';
+                });
+        }
+
+        /* ---- pending employees (admin) ---- */
+        $('btnPendingBack').addEventListener('click', function () {
+            $('adminDashboard').style.display = '';
+            showScreen('adminScreen');
+        });
+
+        function loadPendingEmployees() {
+            var list = $('pendingList');
+            list.innerHTML = '<div class="loading-text">Загрузка...</div>';
+
+            var pin = $('pinInput').value.trim();
+            if (!APPS_SCRIPT_URL || !pin) {
+                list.innerHTML = '<div class="no-marks">Нет PIN</div>';
+                return;
+            }
+
+            fetch(APPS_SCRIPT_URL + '?action=pendingEmployees&pin=' + encodeURIComponent(pin))
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.error) {
+                        list.innerHTML = '<div class="error">' + data.error + '</div>';
+                        return;
+                    }
+                    if (data.length === 0) {
+                        list.innerHTML = '<div class="no-marks">Нет новых заявок</div>';
+                        return;
+                    }
+                    var h = '';
+                    for (var i = 0; i < data.length; i++) {
+                        h += '<div class="history-item">';
+                        h += '<div class="history-date">' + data[i].name + '</div>';
+                        h += '<div class="history-object">' + data[i].phone + '</div>';
+                        h += '<div style="margin-top:8px">';
+                        h += '<button class="btn-primary btn-small" onclick="confirmEmployee(' + data[i].userId + ', \'active\')">Подтвердить</button>';
+                        h += '<button class="btn-secondary btn-small" style="margin-left:8px" onclick="confirmEmployee(' + data[i].userId + ', \'rejected\')">Отклонить</button>';
+                        h += '</div></div>';
+                    }
+                    list.innerHTML = h;
+                })
+                .catch(function () {
+                    list.innerHTML = '<div class="no-marks">Ошибка загрузки</div>';
+                });
+        }
+
+        window.confirmEmployee = function(employeeUserId, status) {
+            var pin = $('pinInput').value.trim();
+            if (!APPS_SCRIPT_URL || !pin) return;
+
+            fetch(APPS_SCRIPT_URL + '?action=confirmEmployee&pin=' + encodeURIComponent(pin) + '&employeeUserId=' + employeeUserId + '&status=' + status + '&adminUserId=' + adminUserId)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.success) {
+                        alert('Сотрудник ' + (status === 'active' ? 'подтверждён' : 'отклонён'));
+                        loadPendingEmployees();
+                    } else {
+                        alert(data.message || 'Ошибка');
+                    }
+                })
+                .catch(function () {
+                    alert('Ошибка соединения');
+                });
+        };
+
         /* ---- init ---- */
         function init() {
             initMaxBridge();
@@ -1098,13 +1538,39 @@
                 try {
                     userData = JSON.parse(stored);
                     if (userData.firstName && userData.lastName && userData.phone) {
-                        showMainMenu();
+                        checkEmployeeStatusAndShowMain();
                         return;
                     }
                 } catch (e) {}
             }
             showScreen('registrationScreen');
             updateRegisterButton();
+        }
+
+        function checkEmployeeStatusAndShowMain() {
+            if (!APPS_SCRIPT_URL || !maxUser.userId) {
+                showMainMenu();
+                return;
+            }
+
+            fetch(APPS_SCRIPT_URL + '?action=profile&userId=' + maxUser.userId)
+                .then(function (r) { return r.json(); })
+                .then(function (data) {
+                    if (data.registered && data.status === 'active') {
+                        showMainMenu();
+                    } else if (data.registered && data.status === 'pending') {
+                        showScreen('registrationScreen');
+                        $('regError').textContent = 'Ваша заявка на рассмотрении';
+                    } else if (data.registered && data.status === 'rejected') {
+                        showScreen('registrationScreen');
+                        $('regError').textContent = 'Ваша заявка отклонена. Попробуйте ещё раз.';
+                    } else {
+                        showMainMenu();
+                    }
+                })
+                .catch(function () {
+                    showMainMenu();
+                });
         }
 
         init();
