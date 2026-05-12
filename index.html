@@ -1638,8 +1638,14 @@
                     } else if (data.registered && data.status === 'rejected') {
                         showScreen('registrationScreen');
                         $('regError').textContent = 'Ваша заявка отклонена. Попробуйте ещё раз.';
+                    } else if (data.registered && data.status === 'blocked') {
+                        showScreen('registrationScreen');
+                        $('regError').textContent = 'Вы заблокированы. Обратитесь к администратору.';
                     } else {
-                        showMainMenu();
+                        localStorage.removeItem('userData');
+                        userData = { firstName: '', lastName: '', phone: '' };
+                        showScreen('registrationScreen');
+                        updateRegisterButton();
                     }
                 })
                 .catch(function () {
