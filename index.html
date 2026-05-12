@@ -714,7 +714,7 @@
 
     <script>
     (function () {
-        var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyx4BvEv3ESu_3PFrKKqYgqTlkg3XP85mw7rwHcAtN1MlpwKU16avMD3PlJ_ennXvihMw/exec';
+        var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby9J0B2CaMMNHju8EtQlf5AQWm6jREqmXH0vHJAE0BFeDTpP0G-sUBgEw1c_HrsPIA1Qw/exec';
 
         var userData = { firstName: '', lastName: '', phone: '' };
         var objects = [];
@@ -860,7 +860,14 @@
             statusEl.innerHTML = '';
             statusEl.style.display = 'none';
 
-            if (!APPS_SCRIPT_URL || !maxUser.userId) return;
+            var btnAddRecord = $('btnAddRecord');
+            var btnMyRecords = $('btnMyRecords');
+
+            if (!APPS_SCRIPT_URL || !maxUser.userId) {
+                btnAddRecord.style.display = 'none';
+                btnMyRecords.style.display = 'none';
+                return;
+            }
 
             fetch(APPS_SCRIPT_URL + '?action=profile&userId=' + maxUser.userId)
                 .then(function (r) { return r.json(); })
@@ -869,17 +876,35 @@
                         statusEl.textContent = 'Не зарегистрирован';
                         statusEl.className = 'user-status';
                         statusEl.style.display = 'inline-block';
+                        btnAddRecord.style.display = 'none';
+                        btnMyRecords.style.display = 'none';
                     } else if (data.status === 'pending') {
                         statusEl.textContent = 'На рассмотрении';
                         statusEl.className = 'user-status pending';
                         statusEl.style.display = 'inline-block';
+                        btnAddRecord.style.display = 'none';
+                        btnMyRecords.style.display = 'none';
                     } else if (data.status === 'rejected') {
                         statusEl.textContent = 'Отклонён';
                         statusEl.className = 'user-status rejected';
                         statusEl.style.display = 'inline-block';
+                        btnAddRecord.style.display = 'none';
+                        btnMyRecords.style.display = 'none';
+                    } else if (data.status === 'blocked') {
+                        statusEl.textContent = 'Заблокирован';
+                        statusEl.className = 'user-status rejected';
+                        statusEl.style.display = 'inline-block';
+                        btnAddRecord.style.display = 'none';
+                        btnMyRecords.style.display = 'none';
+                    } else if (data.status === 'active') {
+                        btnAddRecord.style.display = '';
+                        btnMyRecords.style.display = '';
                     }
                 })
-                .catch(function () {});
+                .catch(function () {
+                    btnAddRecord.style.display = 'none';
+                    btnMyRecords.style.display = 'none';
+                });
         }
 
         function loadTodayMarks() {
