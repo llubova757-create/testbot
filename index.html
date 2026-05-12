@@ -1102,12 +1102,6 @@
             }
         });
 
-        $('btnPendingEmployees').addEventListener('click', function () {
-            $('adminDashboard').style.display = 'none';
-            showScreen('pendingEmployeesScreen');
-            loadPendingEmployees();
-        });
-
         function loadAdminStats(pin) {
             $('pinError').textContent = '';
             $('adminDashboard').style.display = 'none';
