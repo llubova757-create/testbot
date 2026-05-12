@@ -618,7 +618,7 @@
                 <div class="admin-actions">
                     <button class="btn-primary" id="btnRefreshStats">Обновить</button>
                     <button class="btn-secondary" id="btnSendReport">Отправить отчёт ботом</button>
-                    <button class="btn-secondary" id="btnPendingEmployees">Новые сотрудники</button>
+                    <button class="btn-secondary" id="btnEmployees">Сотрудники</button>
                     <button class="btn-secondary" id="btnAdminBack">Назад</button>
                 </div>
             </div>
@@ -692,14 +692,21 @@
             </div>
         </div>
 
-        <!-- Pending employees screen -->
-        <div id="pendingEmployeesScreen" class="screen">
-            <h1>Новые сотрудники</h1>
+        <!-- Employees screen -->
+        <div id="employeesScreen" class="screen">
+            <h1>Сотрудники</h1>
             <div class="card">
-                <div class="history-list" id="pendingList">
+                <div class="period-buttons" id="employeeFilters">
+                    <button class="period-btn active" data-filter="all">Все</button>
+                    <button class="period-btn" data-filter="active">Подтверждён</button>
+                    <button class="period-btn" data-filter="pending">На рассмотрении</button>
+                    <button class="period-btn" data-filter="rejected">Отклонены</button>
+                    <button class="period-btn" data-filter="blocked">Заблокирован</button>
+                </div>
+                <div class="history-list" id="employeesList">
                     <div class="loading-text">Загрузка...</div>
                 </div>
-                <button class="btn-secondary btn-small" id="btnPendingBack">Назад</button>
+                <button class="btn-secondary btn-small" id="btnEmployeesBack">Назад</button>
             </div>
         </div>
 
@@ -707,7 +714,7 @@
 
     <script>
     (function () {
-        var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycby7vY6WUKvLcGvdvsGfMzS9ttFiYUCU93sSu8ivPG3XB4lxwT_O8On-3vwPIEq9DX-4HA/exec';
+        var APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyx4BvEv3ESu_3PFrKKqYgqTlkg3XP85mw7rwHcAtN1MlpwKU16avMD3PlJ_ennXvihMw/exec';
 
         var userData = { firstName: '', lastName: '', phone: '' };
         var objects = [];
@@ -1468,13 +1475,41 @@
         }
 
         /* ---- pending employees (admin) ---- */
-        $('btnPendingBack').addEventListener('click', function () {
+        $('btnEmployeesBack').addEventListener('click', function () {
             $('adminDashboard').style.display = '';
             showScreen('adminScreen');
         });
 
-        function loadPendingEmployees() {
-            var list = $('pendingList');
+        var currentEmployeeFilter = 'all';
+
+        $('employeeFilters').addEventListener('click', function (e) {
+            if (e.target.classList.contains('period-btn')) {
+                var buttons = $('employeeFilters').querySelectorAll('.period-btn');
+                for (var i = 0; i < buttons.length; i++) {
+                    buttons[i].classList.remove('active');
+                }
+                e.target.classList.add('active');
+                currentEmployeeFilter = e.target.getAttribute('data-filter');
+                loadEmployees();
+            }
+        });
+
+        $('btnEmployees').addEventListener('click', function () {
+            $('adminDashboard').style.display = 'none';
+            currentEmployeeFilter = 'all';
+            var buttons = $('employeeFilters').querySelectorAll('.period-btn');
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].classList.remove('active');
+                if (buttons[i].getAttribute('data-filter') === 'all') {
+                    buttons[i].classList.add('active');
+                }
+            }
+            showScreen('employeesScreen');
+            loadEmployees();
+        });
+
+        function loadEmployees() {
+            var list = $('employeesList');
             list.innerHTML = '<div class="loading-text">Загрузка...</div>';
 
             var pin = $('pinInput').value.trim();
@@ -1483,7 +1518,7 @@
                 return;
             }
 
-            fetch(APPS_SCRIPT_URL + '?action=pendingEmployees&pin=' + encodeURIComponent(pin))
+            fetch(APPS_SCRIPT_URL + '?action=employees&pin=' + encodeURIComponent(pin) + '&filter=' + currentEmployeeFilter)
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     if (data.error) {
@@ -1491,17 +1526,38 @@
                         return;
                     }
                     if (data.length === 0) {
-                        list.innerHTML = '<div class="no-marks">Нет новых заявок</div>';
+                        list.innerHTML = '<div class="no-marks">Нет сотрудников</div>';
                         return;
                     }
                     var h = '';
                     for (var i = 0; i < data.length; i++) {
+                        var emp = data[i];
+                        var statusText = emp.status === 'active' ? 'Подтверждён' : (emp.status === 'pending' ? 'На рассмотрении' : (emp.status === 'rejected' ? 'Отклонён' : 'Заблокирован'));
+                        var statusClass = emp.status;
+                        var adminBadge = emp.isAdmin ? '<span style="background:#007AFF;color:#fff;padding:2px 6px;border-radius:4px;font-size:11px;margin-left:6px">Админ</span>' : '';
+
                         h += '<div class="history-item">';
-                        h += '<div class="history-date">' + data[i].name + '</div>';
-                        h += '<div class="history-object">' + data[i].phone + '</div>';
-                        h += '<div style="margin-top:8px">';
-                        h += '<button class="btn-primary btn-small" onclick="confirmEmployee(' + data[i].userId + ', \'active\')">Подтвердить</button>';
-                        h += '<button class="btn-secondary btn-small" style="margin-left:8px" onclick="confirmEmployee(' + data[i].userId + ', \'rejected\')">Отклонить</button>';
+                        h += '<div class="history-date">' + emp.name + adminBadge + '</div>';
+                        h += '<div class="history-object">' + (emp.phone || '') + '</div>';
+                        h += '<div class="user-status ' + statusClass + '" style="display:inline-block;margin:4px 0">' + statusText + '</div>';
+                        h += '<div style="margin-top:8px;font-size:12px;color:var(--text-secondary)">';
+
+                        if (emp.status === 'pending') {
+                            h += '<button class="btn-primary btn-small" onclick="updateEmployeeField(' + emp.userId + ', \'status\', \'active\')">Подтвердить</button>';
+                            h += '<button class="btn-secondary btn-small" style="margin-left:4px" onclick="updateEmployeeField(' + emp.userId + ', \'status\', \'rejected\')">Отклонить</button>';
+                        } else if (emp.status === 'active') {
+                            if (emp.isAdmin) {
+                                h += '<button class="btn-secondary btn-small" onclick="updateEmployeeField(' + emp.userId + ', \'isAdmin\', \'false\')">Убрать из админов</button>';
+                            } else {
+                                h += '<button class="btn-primary btn-small" onclick="updateEmployeeField(' + emp.userId + ', \'isAdmin\', \'true\')">Сделать админом</button>';
+                            }
+                            h += '<button class="btn-secondary btn-small" style="margin-left:4px" onclick="updateEmployeeField(' + emp.userId + ', \'status\', \'blocked\')">Заблокировать</button>';
+                        } else if (emp.status === 'blocked') {
+                            h += '<button class="btn-primary btn-small" onclick="updateEmployeeField(' + emp.userId + ', \'status\', \'active\')">Разблокировать</button>';
+                        } else if (emp.status === 'rejected') {
+                            h += '<button class="btn-primary btn-small" onclick="updateEmployeeField(' + emp.userId + ', \'status\', \'active\')">Подтвердить</button>';
+                        }
+
                         h += '</div></div>';
                     }
                     list.innerHTML = h;
@@ -1511,16 +1567,15 @@
                 });
         }
 
-        window.confirmEmployee = function(employeeUserId, status) {
+        window.updateEmployeeField = function(userId, field, value) {
             var pin = $('pinInput').value.trim();
             if (!APPS_SCRIPT_URL || !pin) return;
 
-            fetch(APPS_SCRIPT_URL + '?action=confirmEmployee&pin=' + encodeURIComponent(pin) + '&employeeUserId=' + employeeUserId + '&status=' + status + '&adminUserId=' + adminUserId)
+            fetch(APPS_SCRIPT_URL + '?action=updateEmployee&pin=' + encodeURIComponent(pin) + '&userId=' + userId + '&field=' + field + '&value=' + encodeURIComponent(value))
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
                     if (data.success) {
-                        alert('Сотрудник ' + (status === 'active' ? 'подтверждён' : 'отклонён'));
-                        loadPendingEmployees();
+                        loadEmployees();
                     } else {
                         alert(data.message || 'Ошибка');
                     }
