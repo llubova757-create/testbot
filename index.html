@@ -738,12 +738,18 @@
 
         /* ---- MAX Bridge ---- */
         function initMaxBridge() {
-            if (typeof window.WebApp === 'undefined') { return; }
+            if (typeof window.WebApp === 'undefined') {
+                console.log('WebApp not defined');
+                return;
+            }
             isMaxEnv = true;
 
             var data = window.WebApp.initDataUnsafe;
+            console.log('MAX init data:', data);
+
             if (data && data.user) {
                 maxUser.userId = data.user.id || 0;
+                console.log('MAX userId:', maxUser.userId);
                 if (data.user.first_name && !userData.firstName) {
                     $('firstName').value = data.user.first_name;
                 }
@@ -831,6 +837,8 @@
                         if (data.success) {
                             alert('Заявка отправлена на подтверждение!');
                             showMainMenu();
+                        } else if (data.message.indexOf('уже зарегистрирован') !== -1 || data.message.indexOf('уже подтверждён') !== -1) {
+                            showMainMenu();
                         } else {
                             $('regError').textContent = data.message || 'Ошибка регистрации';
                         }
@@ -841,8 +849,8 @@
                         $('regError').textContent = 'Ошибка соединения';
                     });
             } else {
-                $('regError').textContent = '';
-                showMainMenu();
+                $('regError').textContent = 'Ошибка авторизации. Откройте приложение в MAX.';
+                updateRegisterButton();
             }
         });
 
@@ -1607,29 +1615,35 @@
         /* ---- init ---- */
         function init() {
             initMaxBridge();
-            var stored = localStorage.getItem('userData');
-            if (stored) {
-                try {
-                    userData = JSON.parse(stored);
-                    if (userData.firstName && userData.lastName && userData.phone) {
-                        checkEmployeeStatusAndShowMain();
-                        return;
-                    }
-                } catch (e) {}
-            }
-            showScreen('registrationScreen');
-            updateRegisterButton();
+
+            setTimeout(function() {
+                var stored = localStorage.getItem('userData');
+                if (stored) {
+                    try {
+                        userData = JSON.parse(stored);
+                        if (userData.firstName && userData.lastName && userData.phone) {
+                            checkEmployeeStatusAndShowMain();
+                            return;
+                        }
+                    } catch (e) {}
+                }
+                showScreen('registrationScreen');
+                updateRegisterButton();
+            }, 100);
         }
 
         function checkEmployeeStatusAndShowMain() {
             if (!APPS_SCRIPT_URL || !maxUser.userId) {
-                showMainMenu();
+                showScreen('registrationScreen');
+                $('regError').textContent = 'Ошибка авторизации. Откройте приложение в MAX.';
+                updateRegisterButton();
                 return;
             }
 
             fetch(APPS_SCRIPT_URL + '?action=profile&userId=' + maxUser.userId)
                 .then(function (r) { return r.json(); })
                 .then(function (data) {
+                    console.log('Profile check:', data);
                     if (data.registered && data.status === 'active') {
                         showMainMenu();
                     } else if (data.registered && data.status === 'pending') {
@@ -1648,8 +1662,11 @@
                         updateRegisterButton();
                     }
                 })
-                .catch(function () {
-                    showMainMenu();
+                .catch(function (e) {
+                    console.log('Profile check error:', e);
+                    showScreen('registrationScreen');
+                    $('regError').textContent = 'Ошибка соединения';
+                    updateRegisterButton();
                 });
         }
 
